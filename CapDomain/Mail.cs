@@ -3,19 +3,20 @@
     public class Mail
     {
         public string Address { get; set; }
+        public string OTP { get; set; } 
     }
-    public class Message
-    {
-        public string Subject { get; set; }
-        public string To { get; set; }
-        public string Content { get; set; }
-        public Message(string To, string subject, string Content)
-        {
-            this.To = To;       
-            this.Subject = subject; 
-            this.Content = Content;
-        }
-    }
+    //public class Message
+    //{
+    //    public string Subject { get; set; }
+    //    public string To { get; set; }
+    //    public string Content { get; set; }
+    //    public Message(string To, string subject, string Content)
+    //    {
+    //        this.To = To;       
+    //        this.Subject = subject; 
+    //        this.Content = Content;
+    //    }
+    //}
 
     public class EmailConfiguration
     {

@@ -11,8 +11,8 @@ namespace CapAPI.Controllers
     {
        
 
-        private readonly ILogger<WeatherForecastController> _logger;
-        private readonly IMailService _mailService;
+        public ILogger<WeatherForecastController> _logger;
+        public IMailService _mailService;
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger, IMailService mailService)
         {
@@ -20,13 +20,12 @@ namespace CapAPI.Controllers
             _mailService = mailService;
         }
 
-        [HttpGet("Get/{email}")]
-        public async Task<IActionResult> Get(string email)
-        {
-            var message = new Message("jyemingchan05@gmail.com", "Test email", "This is the content from our email.");
+        [HttpGet("GetEmail/{email}")]
+        public async Task<ActionResult> GetEmail(string email)
+        {            
             try
             {
-                await _mailService.SendEmailAsync(message);
+                await _mailService.SendEmailAsync(email);
             }
             catch
             {

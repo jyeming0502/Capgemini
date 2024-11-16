@@ -57,10 +57,10 @@ namespace CapPersistence.Services
 
             //await SendMailAsync(emailAddress, randNum);
         }
-        public async Task SendEmailAsync(Message message)
+        public async Task SendEmailAsync(string email)
         {
             string otp = GenerateOTPAndSendMail();
-            var emailMessage = CreateEmailMessage(message, otp);
+            var emailMessage = CreateEmailMessage(email, otp);
             await SendAsync(emailMessage);
             //await _fluentEmail
             //    .To("jyeming_chan@hotmail.com")
@@ -80,14 +80,14 @@ namespace CapPersistence.Services
             //    throw;
             //}
         }
-        private MimeMessage CreateEmailMessage(Message message, string otp)
+        private MimeMessage CreateEmailMessage(string email, string otp)
         {
             var emailMessage = new MimeMessage();
             emailMessage.From.Add(new MailboxAddress("Jyeming", _emailConfig.From));
-            emailMessage.To.Add(new MailboxAddress("Jyeminggg","jyeming_chan@hotmail.com"));
+            emailMessage.To.Add(new MailboxAddress("Jyeminggg",email));
             emailMessage.Subject = "Verify your account";
             emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Html) { 
-                Text = $"Your OTP code is { otp }. The code is valid for 1 minute"
+                Text = $"Your OTP code is { otp }. The code is valid for 1 minute."
             };
             return emailMessage;
         }

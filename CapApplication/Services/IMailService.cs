@@ -9,7 +9,7 @@ namespace CapApplication.Services
 {
     public interface IMailService
     {
-        Task SendEmailAsync(Message message);
+        Task SendEmailAsync(string message);
 
     }
 }

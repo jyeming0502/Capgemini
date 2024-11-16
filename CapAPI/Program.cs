@@ -11,6 +11,17 @@ var emailConfig = builder.Configuration.GetSection("EmailConfiguration")
 builder.Services.AddSingleton(emailConfig);
 builder.Services.AddScoped<IMailService, MailService>();
 builder.Services.AddControllers();
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("AllowCertainOrigins",
+        policy =>
+        {
+            policy.WithOrigins("https://localhost:7049")
+            .AllowCredentials()
+            .WithMethods("PUT", "DELETE", "GET", "POST")
+            .AllowAnyHeader();
+        });
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -25,6 +36,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowCertainOrigins");
+app.UseRouting();
 
 app.UseAuthorization();
 

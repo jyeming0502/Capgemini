@@ -6,6 +6,7 @@ using CapPersistence.Services;
 using Microsoft.Graph.Models;
 using FluentEmail.Smtp;
 using Domain;
+using Blazored.Toast;
 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -18,12 +19,18 @@ builder.Services.AddScoped<IMailService, MailService>();
 var baseUrl = builder.Configuration.GetSection("MicrosoftGraph")["BaseUrl"];
 var scopes = builder.Configuration.GetSection("MicrosoftGraph:Scopes")
     .Get<List<string>>();
-builder.Services.AddMicrosoftGraphClient(baseUrl, scopes);
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.Configuration.GetValue<string>("BaseAPIUrl")) });
+builder.Services.AddHttpClient("CapAPI", httpc =>
+{
+    httpc.BaseAddress = new Uri(builder.Configuration.GetValue<string>("BaseAPIUrl"));
+});
 
 builder.Services
        .AddFluentEmail("jyemingchan05@gmail.com")
        .AddSmtpSender("localhost", 25);
 builder.Services.AddScoped<IMailService, MailService>();
+builder.Services.AddBlazoredToast();
+
 
 var emailConfig = builder.Configuration.GetSection("EmailConfiguration")
     .Get<EmailConfiguration>();
