@@ -1,0 +1,6 @@
+@CapAPI_HostAddress = http://localhost:5128
+
+GET {{CapAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
