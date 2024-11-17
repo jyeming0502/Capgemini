@@ -14,7 +14,7 @@
     <label for="Address" class="form-label">Email Address</label>
     <InputText type="text" class="form-control" @bind-Value="Mail.Address" />
 </div>
-<div class="col-lg-12 ms-3 mt-2">
+<div class="col-lg-12 mt-2">
     <button type="button" class="button SASaveBtn label_font" @onclick="OnSubmitBtnClick">Send</button>
 </div>
 @if(IsMailSent)
@@ -22,20 +22,21 @@
     <br/><br/>
     <div class="mb-3 mt-4 saleAssetText">
         <label for="OTP" class="form-label">OTP</label>
-        <InputText type="text" class="form-control" @bind-Value="Mail.OTP" />
+        <InputText type="text" class="form-control" @bind-Value="Mail.OTPInfo.OTP" />
     </div>
-    <div class="col-lg-12 ms-3 mt-2">
+    <div class="col-lg-12 mt-2">
         <button type="button" class="button SASaveBtn label_font" @onclick="OnValidateBtnClick">Validate</button>
     </div>
 }
 
 @code {
     public Mail Mail { get; set; } = new Mail();
-    public bool IsMailSent { get; set; }
+    public bool IsMailSent { get; set; } = false;
 
     private async Task<string> OnSubmitBtnClick()
-    {       
-        var response = await _httpClient.GetAsync("WeatherForecast/GetEmail/" + Mail.Address);
+    {
+        string email = Mail.Address;
+        var response = await _httpClient.PostAsJsonAsync("WeatherForecast", email);
         if(response.IsSuccessStatusCode)
         {
             IsMailSent = true;
@@ -47,15 +48,10 @@
 
     private async Task OnValidateBtnClick()
     {
-        
-    }
-    // private void ValidateEmailAddress()
-    // {
-    //     string trimmedAddress = Mail.Address.Substring(Mail.Address.LastIndexOf("@") + 1);
-    //     if(!trimmedAddress.Contains(".dso.org.sg"))
-    //     {
-    //         ToastService.ShowError("Email address must end with .dso.org.sg");
-    //     }
-    // }
-
+        var response = await _httpClient.GetAsync("WeatherForecast/ValidateOTP/" + Mail.Address + Mail.OTPInfo.OTP);
+        if (response.IsSuccessStatusCode)
+        {
+            ToastService.ShowSuccess("OTP is valid and checked");
+        }
+    }  
 }

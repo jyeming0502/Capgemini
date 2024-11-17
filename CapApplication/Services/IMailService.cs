@@ -9,7 +9,7 @@ namespace CapApplication.Services
 {
     public interface IMailService
     {
-        Task SendEmailAsync(string message);
-
+        Task Generate_OTP_Email(string message);
+        string Check_OTP(string email, string otp);
     }
 }
