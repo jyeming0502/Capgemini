@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using CapPersistence.Services;
 using Domain;
-
-using CapApplication.Services;
 
 namespace CapAPI.Controllers
 {
@@ -9,26 +8,24 @@ namespace CapAPI.Controllers
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {       
-        public ILogger<WeatherForecastController> _logger;
-        public IMailService _mailService;
+        private readonly MailService _mailService;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger, IMailService mailService)
+        public WeatherForecastController(MailService mailService)
         {
-            _logger = logger;
             _mailService = mailService;
         }
 
         [HttpPost]
-        public async Task<IActionResult> SendEmailAsync([FromBody]string email)
+        public async Task<ActionResult> SendEmailAsync([FromBody]string email)
         {
             await _mailService.Generate_OTP_Email(email);
             return Ok();
         }
         [HttpGet("ValidateOTP/{email}/{otp}")]
-        public ActionResult ValidateOTP(string email, string otp)
+        public ActionResult<OTPResponse> ValidateOTP(string email, string otp)
         {
-            _mailService.Check_OTP(email, otp);
-            return Ok();
+            OTPResponse response = _mailService.Check_OTP(email, otp);
+            return Ok(response);
         }
     }
 }

@@ -1,11 +1,11 @@
 ﻿@page "/email";
 @using Domain;
-@using CapApplication.Services;
+@using CapPersistence.Services;
 @using Newtonsoft.Json;
 @using System.Net.Http.Json;
 @inject IToastService ToastService;
-@inject IMailService _mailService;
 @inject HttpClient _httpClient;
+@inject NavigationManager _navigationManager;
 
 
 <h3>Send Email</h3>
@@ -15,7 +15,7 @@
     <InputText type="text" class="form-control" @bind-Value="Mail.Address" />
 </div>
 <div class="col-lg-12 mt-2">
-    <button type="button" class="button SASaveBtn label_font" @onclick="OnSubmitBtnClick">Send</button>
+    <button type="button" class="button SASaveBtn label_font" @onclick="OnSubmitBtnClick">@Action</button>
 </div>
 @if(IsMailSent)
 {
@@ -25,33 +25,112 @@
         <InputText type="text" class="form-control" @bind-Value="Mail.OTPInfo.OTP" />
     </div>
     <div class="col-lg-12 mt-2">
-        <button type="button" class="button SASaveBtn label_font" @onclick="OnValidateBtnClick">Validate</button>
+        <button type="button" class="button SASaveBtn label_font" @onclick="OnValidateBtnClick">@OTPAction</button>
     </div>
 }
 
 @code {
-    public Mail Mail { get; set; } = new Mail();
-    public bool IsMailSent { get; set; } = false;
+    private Mail Mail { get; set; } = new Mail()
+    {
+        OTPInfo = new OTPInfo()
+    };
+    private bool IsMailSent = false;
+    private bool IsTimeOut = false;
+    private int RemainingTime = 60;
+    private string Action = "Send";
+    private string OTPAction = "Validate";
+    private CancellationTokenSource _cancellationTokenSource;
+
+    protected override Task OnInitializedAsync()
+    {
+        // Initialize the timer only when the OTP is sent
+        return Task.CompletedTask;
+    }
 
     private async Task<string> OnSubmitBtnClick()
     {
+        if(!ValidateEmailAddress())
+        {
+            return "STATUS_EMAIL_INVALID: email address is invalid";
+        }
+        Action = "Sending...";
         string email = Mail.Address;
         var response = await _httpClient.PostAsJsonAsync("WeatherForecast", email);
         if(response.IsSuccessStatusCode)
         {
             IsMailSent = true;
             ToastService.ShowSuccess("Email containing OTP has been sent successfully. Please check your mailbox for verification.");
+            StartTimeoutTimer();
+            Action = "Send";
             return "STATUS_EMAIL_OK: email containing OTP has been sent successfully.";
         }
-        return "";
+        return "STATUS_EMAIL_FAIL: email address does not exist or sending to the email has failed.";
+    }
+
+    private bool ValidateEmailAddress()
+    {
+        string trimmedAddress = Mail.Address.Substring(Mail.Address.LastIndexOf("@") + 1);
+        if(!trimmedAddress.Contains(".dso.org.sg"))
+        {
+            ToastService.ShowError("Email address must end with .dso.org.sg");
+            Mail.Address = "";
+            return false;
+        }
+        return true;
     }
 
     private async Task OnValidateBtnClick()
     {
-        var response = await _httpClient.GetAsync("WeatherForecast/ValidateOTP/" + Mail.Address + Mail.OTPInfo.OTP);
+        if (IsTimeOut)
+        {
+            ToastService.ShowError("Session expired. Please request a new OTP.");
+            return;
+        }
+        OTPAction = "Validating...";
+        var response = await _httpClient.GetAsync("WeatherForecast/ValidateOTP/" + Mail.Address + "/" + Mail.OTPInfo.OTP);
         if (response.IsSuccessStatusCode)
         {
-            ToastService.ShowSuccess("OTP is valid and checked");
+            var content = await response.Content.ReadAsStringAsync();
+            var output = JsonConvert.DeserializeObject<OTPResponse>(content); 
+            if (output.StatusCode == "STATUS_OTP_OK")
+            {
+                ToastService.ShowSuccess(output.Message);
+                _navigationManager.NavigateTo("/");     // Redirect to home or another page
+            }
+            else if (output.StatusCode == "STATUS_OTP_TIMEOUT" || output.StatusCode == "STATUS_OTP_FAIL")
+            {
+                ToastService.ShowError(output.Message);
+                _navigationManager.NavigateTo("/"); 
+            }
+            else
+            {
+                ToastService.ShowError(output.Message);
+            }
+            OTPAction = "Validate";
         }
     }  
+
+    private void StartTimeoutTimer()
+    {
+        _cancellationTokenSource?.Cancel(); // Cancel any existing timer
+        _cancellationTokenSource = new CancellationTokenSource();
+        int RemainingTime = 60;
+        Task.Run(async () =>
+        {
+            while (RemainingTime > 0 && !_cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                await Task.Delay(1000);  // decrease the remaining time for every second
+                RemainingTime--;
+
+                InvokeAsync(StateHasChanged); // Update UI
+            }
+
+            if (RemainingTime <= 0)
+            {
+                IsTimeOut = true;
+                ToastService.ShowError("Session expired. Please request a new OTP.");
+                _navigationManager.NavigateTo("/");  // Redirect to home or another page
+            }
+        }, _cancellationTokenSource.Token);
+    }
 }

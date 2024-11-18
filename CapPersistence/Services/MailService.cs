@@ -1,26 +1,23 @@
-﻿using Microsoft.Extensions.Logging;
-using CapApplication.Services;
-using MailKit.Net.Smtp;
+﻿using MailKit.Net.Smtp;
 using MimeKit;
 using Domain;
 
 namespace CapPersistence.Services
 {
-    public class MailService: IMailService
+    public class MailService
     {
-        private ILogger<MailService> _logger;
         private readonly EmailConfiguration _emailConfig;
         private readonly Dictionary<string, OTPInfo> storeOTPInfo = new();
-        public MailService(ILogger<MailService> logger, EmailConfiguration emailConfig)
+        public MailService(EmailConfiguration emailConfig)
         {
-            _logger = logger;                        
             _emailConfig = emailConfig; 
         }       
 
+        // generate 6 digits otp, thus the minimum value of the otp starts from 100000
         public string GenerateOTP()
         {
             Random rand = new Random();
-            string randNum = rand.Next(999999).ToString();
+            string randNum = rand.Next(100000, 999999).ToString();
             return randNum;
         }
         private MimeMessage CreateEmailMessage(string email)
@@ -37,6 +34,7 @@ namespace CapPersistence.Services
             };
             return emailMessage;
         }
+        // configure the smtp server for gmail
         private async Task SendAsync(MimeMessage mailMessage)
         {
             using (var client = new SmtpClient())
@@ -62,36 +60,60 @@ namespace CapPersistence.Services
         public async Task Generate_OTP_Email(string email)
         {
             var emailMessage = CreateEmailMessage(email);
-            await SendAsync(emailMessage);           
+            await SendAsync(emailMessage);
         }       
-        public string Check_OTP(string email, string otpInput)
+        public OTPResponse Check_OTP(string email, string otpInput)
         {
-            storeOTPInfo[email].Attempt++;
             // check for email exists
             if (!storeOTPInfo.ContainsKey(email))
             {
-                throw new Exception("STATUS_OTP_NOTSENT: OTP is not sent to your email.");
+                return new OTPResponse()
+                {
+                    StatusCode = "STATUS_OTP_NOTSENT",
+                    Message = "OTP is not sent to your email."
+                };
             }
             // check for otp expiry
             if(DateTime.Now > storeOTPInfo[email].ExpiryTime)
             {
                 storeOTPInfo.Remove(email);
-                throw new Exception("STATUS_OTP_TIMEOUT: timeout after 1 min");
+                return new OTPResponse()
+                {
+                    StatusCode = "STATUS_OTP_TIMEOUT",
+                    Message = "Timeout after 1 min"
+                };
             }
             // check for otp attempt
-            if (storeOTPInfo[email].Attempt >= 3)
+            if (storeOTPInfo[email].Attempt >= 10)
             {
                 storeOTPInfo.Remove(email);
-                throw new Exception("STATUS_OTP_FAIL: OTP is wrong after 10 tries");
+                return new OTPResponse()
+                {
+                    StatusCode = "STATUS_OTP_FAIL",
+                    Message = "OTP is wrong after 10 tries"
+                };
             }
+            // we put this count below of the attempt condition checking so that 
+            // if it is the 10 attempt and the OTP is correct, we shall prompt STATUS_OTP_OK, instead of STATUS_OTP_FAIL. 
+            // if we put the count at the beginning of this method, the attempt is already 10, but then if user input the correct OTP
+            // user will still get STATUS_OTP_FAIL, which is wrong already.
+            storeOTPInfo[email].Attempt++;
             // validate the otp input vs the otp sent 
             if (storeOTPInfo[email].OTP == otpInput)
             {
                 storeOTPInfo.Remove(email);
-                return "STATUS_OTP_OK: OTP is valid and checked";
+                return new OTPResponse()
+                {
+                    StatusCode = "STATUS_OTP_OK",
+                    Message = "OTP is valid and checked"
+                };
             }
             // return if otp is invalid
-            throw new Exception("STATUS_OTP_INVALID: OTP is invalid. Please try again.");
+            return new OTPResponse()
+            {
+                StatusCode = "STATUS_OTP_INVALID",
+                Message = "OTP is invalid. Please try again. "
+            };
         }        
     }
 }

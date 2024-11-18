@@ -1,6 +1,7 @@
-using CapApplication.Services;
 using Domain;
 using CapPersistence.Services;
+using Blazored.Toast.Services;
+using Blazored.Toast;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 var emailConfig = builder.Configuration.GetSection("EmailConfiguration")
     .Get<EmailConfiguration>();
 builder.Services.AddSingleton(emailConfig);
-builder.Services.AddScoped<IMailService, MailService>();
+builder.Services.AddSingleton<MailService>();
 builder.Services.AddControllers();
 builder.Services.AddCors(opt =>
 {
@@ -25,7 +26,7 @@ builder.Services.AddCors(opt =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddBlazoredToast();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
